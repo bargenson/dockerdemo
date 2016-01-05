@@ -1,0 +1,18 @@
+redis:
+  image: redis:3.0
+
+nodeapp:
+  build: ./app
+  links:
+   - redis
+  environment:
+   - "REDIS_HOST=redis"
+   - "PORT=8080"
+   - "DEBUG=true"
+
+web:
+  build: ./nginx
+  links:
+   - nodeapp
+  ports:
+   - "80:80"
