@@ -22,13 +22,14 @@ web:
   ports:
    - "80:80"
   environment:
-   - "SERVICE_NAME=webserver"
+   - "SERVICE_IGNORE=true"
    - "CONSUL_HOST=consul"
    - "CONSUL_PORT=8500"
 
 consul:
   image: progrium/consul:latest
   command: -server -bootstrap -ui-dir /ui
+  hostname: node1
   environment:
    - "SERVICE_IGNORE=true"
   ports:
