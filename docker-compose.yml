@@ -1,18 +1,43 @@
 redis:
   image: redis:3.0
+  environment:
+   - "SERVICE_NAME=redis"
 
 nodeapp:
   build: ./app
   links:
    - redis
+   - consul
   environment:
    - "REDIS_HOST=redis"
    - "PORT=8080"
    - "DEBUG=true"
+   - "SERVICE_NAME=nodeapp"
 
 web:
   build: ./nginx
   links:
    - nodeapp
+   - consul
   ports:
    - "80:80"
+  environment:
+   - "SERVICE_NAME=webserver"
+   - "CONSUL_HOST=consul"
+   - "CONSUL_PORT=8500"
+
+consul:
+  image: progrium/consul:latest
+  command: -server -bootstrap -ui-dir /ui
+  environment:
+   - "SERVICE_IGNORE=true"
+  ports:
+   - "8500:8500"
+
+registrator:
+  image: gliderlabs/registrator:latest
+  command: -internal consul://consul:8500
+  links:
+   - consul
+  volumes:
+   - /var/run/docker.sock:/tmp/docker.sock

@@ -10,9 +10,8 @@ events {
 
 http {
 
-    upstream nodeapp {
-        server nodeapp:8080;
-        keepalive 16;
+    upstream nodeapp { {{range service "nodeapp"}}
+        server {{.Address}}:{{.Port}};{{end}}
     }
 
     sendfile on;
