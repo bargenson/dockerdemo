@@ -4,41 +4,31 @@ redis:
    - "SERVICE_NAME=redis"
 
 nodeapp:
-  build: ./app
-  links:
-   - redis
-   - consul
+  image: bargenson/dockerdemo_nodeapp
   environment:
-   - "REDIS_HOST=redis"
+   - "REDIS_HOST=dockerdemo_redis_1"
    - "PORT=8080"
    - "DEBUG=true"
    - "SERVICE_NAME=nodeapp"
+  ports:
+   - "8080"
+
+#nodeapp2:
+#  image: bargenson/dockerdemo_nodeapp
+#  environment:
+#   - "REDIS_HOST=dockerdemo_redis_1"
+#   - "PORT=8080"
+#   - "DEBUG=true"
+#   - "SERVICE_NAME=nodeapp"
+#   - "affinity:container!=~dockerdemo_nodeapp*"
+#  ports:
+#   - "8080"
 
 web:
-  build: ./nginx
-  links:
-   - nodeapp
-   - consul
+  image: bargenson/dockerdemo_web
   ports:
    - "80:80"
   environment:
    - "SERVICE_IGNORE=true"
-   - "CONSUL_HOST=consul"
+   - "CONSUL_HOST=${CONSUL_HOST}"
    - "CONSUL_PORT=8500"
-
-consul:
-  image: progrium/consul:latest
-  command: -server -bootstrap -ui-dir /ui
-  hostname: node1
-  environment:
-   - "SERVICE_IGNORE=true"
-  ports:
-   - "8500:8500"
-
-registrator:
-  image: gliderlabs/registrator:latest
-  command: -internal consul://consul:8500
-  links:
-   - consul
-  volumes:
-   - /var/run/docker.sock:/tmp/docker.sock
