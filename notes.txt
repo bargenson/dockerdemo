@@ -1,0 +1,90 @@
+################
+# Setup Consul #
+################
+
+$ docker-machine create -d virtualbox dockerdemo-keystore
+
+$ eval "$(docker-machine env dockerdemo-keystore)"
+
+$ docker run -d \
+  --restart=unless-stopped \
+  -p "8500:8500" \
+  -h "consul" \
+  --name consul-dev \
+  progrium/consul -server -bootstrap -ui-dir /ui
+
+$ docker run -d \
+  --restart=unless-stopped \
+  -p "8600:8500" \
+  -h "consul" \
+  --name consul-swarm \
+  progrium/consul -server -bootstrap -ui-dir /ui
+
+
+#####################
+# Setup dev machine #
+#####################
+
+$ eval $(docker-machine env dev)
+$ docker run -d --name registrator --restart=unless-stopped -v /var/run/docker.sock:/tmp/docker.sock --net=host gliderlabs/registrator:latest -ip `docker-machine ip dev` consul://`docker-machine ip dockerdemo-keystore`:8500
+
+
+#######################
+# Setup Swarm Cluster #
+#######################
+
+$ docker-machine create -d virtualbox \
+  --swarm --swarm-master \
+  --swarm-discovery="consul://$(docker-machine ip dockerdemo-keystore):8600" \
+  --engine-opt="cluster-store=consul://$(docker-machine ip dockerdemo-keystore):8600" \
+  --engine-opt="cluster-advertise=eth1:2376" \
+  dockerdemo-00
+
+$ docker-machine create -d virtualbox \
+  --swarm \
+  --swarm-discovery="consul://$(docker-machine ip dockerdemo-keystore):8600" \
+  --engine-opt="cluster-store=consul://$(docker-machine ip dockerdemo-keystore):8600" \
+  --engine-opt="cluster-advertise=eth1:2376" \
+  dockerdemo-01
+
+$ eval $(docker-machine env --swarm dockerdemo-00)
+
+$ docker run -d --name registrator0 -v /var/run/docker.sock:/tmp/docker.sock -e constraint:node==dockerdemo-00 gliderlabs/registrator:latest -ip `docker-machine ip dockerdemo-00` consul://`docker-machine ip dockerdemo-keystore`:8600
+
+$ docker run -d --name registrator1 -v /var/run/docker.sock:/tmp/docker.sock -e constraint:node==dockerdemo-01 gliderlabs/registrator:latest -ip `docker-machine ip dockerdemo-01` consul://`docker-machine ip dockerdemo-keystore`:8600
+
+$ docker-compose pull
+
+
+##########
+# Basics #
+##########
+
+$ CONSUL_HOST=`docker-machine ip dockerdemo-keystore` CONSUL_PORT=8500 docker-compose up -d
+$ docker-compose build
+$ CONSUL_HOST=`docker-machine ip dockerdemo-keystore` CONSUL_PORT=8500 docker-compose up -d
+$ docker-compose ps
+$ docker-compose stop
+$ docker-compose rm
+$ CONSUL_HOST=`docker-machine ip dockerdemo-keystore` CONSUL_PORT=8500 docker-compose up -d
+
+# Change something in HTML file
+$ docker-compose build
+$ CONSUL_HOST=`docker-machine ip dockerdemo-keystore` CONSUL_PORT=8500 docker-compose up -d
+
+# Scale
+$ CONSUL_HOST=`docker-machine ip dockerdemo-keystore` CONSUL_PORT=8500 docker-compose scale nodeapp=10
+$ docker exec -ti dockerdemo_web_1 cat /etc/nginx/nginx.conf
+$ CONSUL_HOST=`docker-machine ip dockerdemo-keystore` CONSUL_PORT=8500 docker-compose scale nodeapp=1
+$ docker exec -ti dockerdemo_web_1 cat /etc/nginx/nginx.conf
+
+
+##########
+# Swarm #
+##########
+
+$ eval $(docker-machine env --swarm dockerdemo-00)
+$ CONSUL_HOST=`docker-machine ip dockerdemo-keystore` CONSUL_PORT=8600 docker-compose up -d
+$ CONSUL_HOST=`docker-machine ip dockerdemo-keystore` CONSUL_PORT=8600 docker-compose scale nodeapp=3
+
+

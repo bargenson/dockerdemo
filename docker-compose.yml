@@ -1,34 +1,29 @@
-redis:
-  image: redis:3.0
-  environment:
-   - "SERVICE_NAME=redis"
+version: '2'
 
-nodeapp:
-  image: bargenson/dockerdemo_nodeapp
-  environment:
-   - "REDIS_HOST=dockerdemo_redis_1"
-   - "PORT=8080"
-   - "DEBUG=true"
-   - "SERVICE_NAME=nodeapp"
-  ports:
-   - "8080"
+services:
 
-#nodeapp2:
-#  image: bargenson/dockerdemo_nodeapp
-#  environment:
-#   - "REDIS_HOST=dockerdemo_redis_1"
-#   - "PORT=8080"
-#   - "DEBUG=true"
-#   - "SERVICE_NAME=nodeapp"
-#   - "affinity:container!=~dockerdemo_nodeapp*"
-#  ports:
-#   - "8080"
+  redis:
+    image: redis:3.0
+    environment:
+     - "SERVICE_NAME=redis"
 
-web:
-  image: bargenson/dockerdemo_web
-  ports:
-   - "80:80"
-  environment:
-   - "SERVICE_IGNORE=true"
-   - "CONSUL_HOST=${CONSUL_HOST}"
-   - "CONSUL_PORT=8500"
+  nodeapp:
+    image: bargenson/dockerdemo_nodeapp
+    build: ./app
+    environment:
+     - "REDIS_HOST=redis"
+     - "PORT=8080"
+     - "DEBUG=true"
+     - "SERVICE_NAME=nodeapp"
+    ports:
+     - "8080"
+
+  web:
+    image: bargenson/dockerdemo_web
+    build: ./nginx
+    ports:
+     - "80:80"
+    environment:
+     - "SERVICE_IGNORE=true"
+     - "CONSUL_HOST=${CONSUL_HOST}"
+     - "CONSUL_PORT=${CONSUL_PORT}"
